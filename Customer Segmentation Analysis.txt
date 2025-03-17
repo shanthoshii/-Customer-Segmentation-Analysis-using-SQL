@@ -1,0 +1,127 @@
+-- Creating the Customers table
+
+CREATE TABLE customers(
+  customer_id SERIAL PRIMARY KEY,
+  name VARCHAR(100),
+  location VARCHAR(50),
+  total_spent NUMERIC(10,2)
+);
+
+
+-- Creating the Transactions table with a foreign key reference to Customers
+
+CREATE TABLE transactions(
+  transaction_id SERIAL PRIMARY KEY,
+  customer_id INT REFERENCES customers(customer_id),
+  txn_date DATE,
+  amount NUMERIC(10,2)
+);
+
+
+-- Inserting sample data into Customers table
+
+INSERT INTO customers(name,location,total_spent) VALUES
+('Shanthoshi','India',10000.50),
+('Devishree','Singapore',12000.00),
+('Shantha devi','Malaysia',7000.00),
+('Senthil','India',7500.00),
+('Sainthavi','Japan',6500.00),
+('Harish','India',9500.00),
+('Thanvi','Japan',4000.25);
+
+
+-- Inserting sample data into Transactions table
+
+INSERT INTO transactions(customer_id,txn_date,amount)VALUES
+(1,'2024-01-10',2000.00),
+(2,'2024-02-20',3500.00),
+(3,'2024-03-05',1500.00),
+(4,'2024-03-06',8000.00),
+(5,'2024-02-15',4500.00),
+(6,'2024-01-11',3500.00),
+(7,'2024-02-17',9000.00);
+
+-- Retrieve all customers
+
+SELECT * FROM customers;
+
+-- Retrieve all transactions
+
+SELECT * FROM transactions;
+
+-- 1.Categorizing customers based on total spending
+
+SELECT customer_id,
+       name,
+       total_spent,
+       CASE
+         WHEN total_spent >= 10000 THEN 'High Spender'
+         WHEN total_spent BETWEEN 5000 AND 9999 THEN 'Medium Spender'
+         ELSE 'Low Spender'
+       END AS customer_segment
+FROM customers;
+
+-- 2.Retrieving the top 5 customers based on total spending
+
+SELECT customer_id, name, location, total_spent
+FROM customers
+ORDER BY total_spent DESC
+LIMIT 5;
+
+-- 3.Analyzing monthly spending trends
+
+SELECT
+  DATE_TRUNC('month', txn_date) as month,
+  customer_id,
+  SUM(amount) AS monthly_spent
+FROM transactions
+GROUP BY month, customer_id
+ORDER BY month, monthly_spent DESC;
+
+--4.Analyzing Average Spending Per Customer
+
+SELECT c.customer_id, c.name,
+  COUNT(transaction_id) AS total_transactions,
+  SUM(amount) AS total_spent,
+  AVG(amount) AS avg_spent
+FROM customers c
+JOIN transactions t 
+ON c.customer_id = t.customer_id
+GROUP BY c.customer_id, c.name;
+
+
+--5.Identifying Returning Customers (Who Made Multiple Purchases)
+
+SELECT c.customer_id, c.name,
+       COUNT(t.transaction_id) AS purchase_count
+FROM customers c
+JOIN transactions t
+ON c.customer_id = t.customer_id
+GROUP BY c.customer_id, c.name
+HAVING COUNT(t.transaction_id) > 1
+ORDER BY purchase_count DESC;
+
+
+--6. Identifying Customers Who Haven't Purchased in the Last 3 Months
+
+SELECT c.customer_id, c.name, c.location
+FROM customers c
+LEFT JOIN transactions t 
+ON c.customer_id = t.customer_id
+WHERE t.txn_date IS NULL
+   OR t.txn_date < CURRENT_DATE - INTERVAL '3 months';
+
+
+--7.Identifying customers who spent above the average spending
+
+SELECT customer_id, name, total_spent
+FROM customers
+WHERE total_spent > (SELECT AVG(total_spent) FROM customers);
+
+
+--8. Identifying the Most Profitable Locations
+
+SELECT location, SUM(total_spent) AS total_revenue
+FROM customers
+GROUP BY location
+ORDER BY total_revenue DESC;
